@@ -102,8 +102,12 @@ export function cliResultToOpenai(
  * e.g., "claude-sonnet-4-5-20250929" -> "claude-sonnet-4"
  */
 function normalizeModelName(model: string): string {
-  if (model.includes("opus")) return "claude-opus-4";
-  if (model.includes("sonnet")) return "claude-sonnet-4";
-  if (model.includes("haiku")) return "claude-haiku-4";
+  const lowerModel = model.toLowerCase();
+  
+  if (lowerModel.includes("opus")) return "claude-opus-4";
+  if (lowerModel.includes("sonnet")) return "claude-sonnet-4";
+  if (lowerModel.includes("haiku")) return "claude-haiku-4";
+  
+  // Return as-is if no match (already logged warning in extractModel)
   return model;
 }

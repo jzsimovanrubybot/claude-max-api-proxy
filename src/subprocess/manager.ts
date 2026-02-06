@@ -102,7 +102,12 @@ export class ClaudeSubprocess extends EventEmitter {
           if (errorText) {
             // Don't emit as error unless it's actually an error
             // Claude CLI may write debug info to stderr
-            console.error("[Subprocess stderr]:", errorText.slice(0, 200));
+            if (process.env.DEBUG) {
+              console.error("[Subprocess stderr]:", errorText);
+            } else {
+              // In production, log truncated version
+              console.error("[Subprocess stderr]:", errorText.slice(0, 200));
+            }
           }
         });
 

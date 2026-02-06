@@ -231,23 +231,27 @@ async function handleNonStreamingResponse(
   return new Promise((resolve) => {
     let finalResult: ClaudeCliResult | null = null;
 
-    subprocess.on("result", (result: ClaudeCliResult) => {
+    // Define event handlers so we can remove them later
+    const onResult = (result: ClaudeCliResult) => {
       finalResult = result;
-    });
+    };
 
-    subprocess.on("error", (error: Error) => {
+    const onError = (error: Error) => {
       console.error("[NonStreaming] Error:", error.message);
-      res.status(500).json({
-        error: {
-          message: error.message,
-          type: "server_error",
-          code: null,
-        },
-      });
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: {
+            message: error.message,
+            type: "server_error",
+            code: null,
+          },
+        });
+      }
+      cleanup();
       resolve();
-    });
+    };
 
-    subprocess.on("close", (code: number | null) => {
+    const onClose = (code: number | null) => {
       if (finalResult) {
         res.json(cliResultToOpenai(finalResult, requestId));
       } else if (!res.headersSent) {
@@ -259,8 +263,21 @@ async function handleNonStreamingResponse(
           },
         });
       }
+      cleanup();
       resolve();
-    });
+    };
+
+    // Cleanup function to remove all event listeners
+    const cleanup = () => {
+      subprocess.removeListener("result", onResult);
+      subprocess.removeListener("error", onError);
+      subprocess.removeListener("close", onClose);
+    };
+
+    // Attach event listeners
+    subprocess.on("result", onResult);
+    subprocess.on("error", onError);
+    subprocess.on("close", onClose);
 
     // Start the subprocess
     subprocess

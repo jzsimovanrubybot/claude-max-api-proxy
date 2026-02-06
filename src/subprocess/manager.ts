@@ -68,16 +68,22 @@ export class ClaudeSubprocess extends EventEmitter {
         }, timeout);
 
         // Handle spawn errors (e.g., claude not found)
-        this.process.on("error", (err) => {
+        this.process.on("error", (err: NodeJS.ErrnoException) => {
           this.clearTimeout();
-          if (err.message.includes("ENOENT")) {
+          if (err.code === "ENOENT") {
             reject(
               new Error(
                 "Claude CLI not found. Install with: npm install -g @anthropic-ai/claude-code"
               )
             );
+          } else if (err.code === "EACCES") {
+            reject(
+              new Error(
+                "Permission denied to execute Claude CLI. Check file permissions."
+              )
+            );
           } else {
-            reject(err);
+            reject(new Error(`Failed to spawn Claude CLI: ${err.message}`));
           }
         });
 

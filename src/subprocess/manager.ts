@@ -170,8 +170,11 @@ export class ClaudeSubprocess extends EventEmitter {
         } else if (isResultMessage(message)) {
           this.emit("result", message);
         }
-      } catch {
-        // Non-JSON output, emit as raw
+      } catch (err) {
+        // Non-JSON output or parse error, emit as raw
+        if (process.env.DEBUG) {
+          console.error("[Subprocess] Failed to parse JSON:", err instanceof Error ? err.message : "unknown error");
+        }
         this.emit("raw", trimmed);
       }
     }

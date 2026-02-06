@@ -26,6 +26,19 @@ export async function handleChatCompletions(
 ): Promise<void> {
   const requestId = uuidv4().replace(/-/g, "").slice(0, 24);
   const body = req.body as OpenAIChatRequest;
+  
+  // Validate stream parameter is boolean if provided
+  if (body.stream !== undefined && typeof body.stream !== "boolean") {
+    res.status(400).json({
+      error: {
+        message: "stream parameter must be a boolean",
+        type: "invalid_request_error",
+        code: "invalid_stream",
+      },
+    });
+    return;
+  }
+  
   const stream = body.stream === true;
 
   try {

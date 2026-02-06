@@ -70,7 +70,7 @@ export function cliResultToOpenai(
   requestId: string
 ): OpenAIChatResponse {
   // Get model from modelUsage or default
-  const modelName = result.modelUsage
+  const modelName = result.modelUsage && Object.keys(result.modelUsage).length > 0
     ? Object.keys(result.modelUsage)[0]
     : "claude-sonnet-4";
 

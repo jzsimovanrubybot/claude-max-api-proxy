@@ -43,12 +43,34 @@ export async function handleChatCompletions(
 
   try {
     // Validate request
-    if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
+    if (!body.messages) {
       res.status(400).json({
         error: {
-          message: "messages is required and must be a non-empty array",
+          message: "Missing required parameter: 'messages'",
           type: "invalid_request_error",
-          code: "invalid_messages",
+          code: "missing_messages",
+        },
+      });
+      return;
+    }
+    
+    if (!Array.isArray(body.messages)) {
+      res.status(400).json({
+        error: {
+          message: "'messages' parameter must be an array",
+          type: "invalid_request_error",
+          code: "invalid_messages_type",
+        },
+      });
+      return;
+    }
+    
+    if (body.messages.length === 0) {
+      res.status(400).json({
+        error: {
+          message: "'messages' array cannot be empty",
+          type: "invalid_request_error",
+          code: "empty_messages",
         },
       });
       return;

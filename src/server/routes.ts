@@ -111,17 +111,8 @@ async function handleStreamingResponse(
     let lastModel = "claude-sonnet-4";
     let isComplete = false;
 
-    // Handle actual client disconnect (response stream closed)
-    res.on("close", () => {
-      if (!isComplete) {
-        // Client disconnected before response completed - kill subprocess
-        subprocess.kill();
-      }
-      resolve();
-    });
-
-    // Handle streaming content deltas
-    subprocess.on("content_delta", (event: ClaudeCliStreamEvent) => {
+    // Define event handlers so we can remove them later
+    const onContentDelta = (event: ClaudeCliStreamEvent) => {
       const text = event.event.delta?.text || "";
       if (text && !res.writableEnded) {
         const chunk = {
@@ -141,14 +132,13 @@ async function handleStreamingResponse(
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
         isFirst = false;
       }
-    });
+    };
 
-    // Handle final assistant message (for model name)
-    subprocess.on("assistant", (message: ClaudeCliAssistant) => {
+    const onAssistant = (message: ClaudeCliAssistant) => {
       lastModel = message.message.model;
-    });
+    };
 
-    subprocess.on("result", (_result: ClaudeCliResult) => {
+    const onResult = (_result: ClaudeCliResult) => {
       isComplete = true;
       if (!res.writableEnded) {
         // Send final done chunk with finish_reason
@@ -157,10 +147,11 @@ async function handleStreamingResponse(
         res.write("data: [DONE]\n\n");
         res.end();
       }
+      cleanup();
       resolve();
-    });
+    };
 
-    subprocess.on("error", (error: Error) => {
+    const onError = (error: Error) => {
       console.error("[Streaming] Error:", error.message);
       if (!res.writableEnded) {
         res.write(
@@ -170,10 +161,11 @@ async function handleStreamingResponse(
         );
         res.end();
       }
+      cleanup();
       resolve();
-    });
+    };
 
-    subprocess.on("close", (code: number | null) => {
+    const onClose = (code: number | null) => {
       // Subprocess exited - ensure response is closed
       if (!res.writableEnded) {
         if (code !== 0 && !isComplete) {
@@ -185,8 +177,36 @@ async function handleStreamingResponse(
         res.write("data: [DONE]\n\n");
         res.end();
       }
+      cleanup();
       resolve();
-    });
+    };
+
+    const onResClose = () => {
+      if (!isComplete) {
+        // Client disconnected before response completed - kill subprocess
+        subprocess.kill();
+      }
+      cleanup();
+      resolve();
+    };
+
+    // Cleanup function to remove all event listeners
+    const cleanup = () => {
+      subprocess.removeListener("content_delta", onContentDelta);
+      subprocess.removeListener("assistant", onAssistant);
+      subprocess.removeListener("result", onResult);
+      subprocess.removeListener("error", onError);
+      subprocess.removeListener("close", onClose);
+      res.removeListener("close", onResClose);
+    };
+
+    // Attach event listeners
+    res.on("close", onResClose);
+    subprocess.on("content_delta", onContentDelta);
+    subprocess.on("assistant", onAssistant);
+    subprocess.on("result", onResult);
+    subprocess.on("error", onError);
+    subprocess.on("close", onClose);
 
     // Start the subprocess
     subprocess.start(cliInput.prompt, {

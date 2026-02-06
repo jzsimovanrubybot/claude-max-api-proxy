@@ -82,7 +82,9 @@ export class ClaudeSubprocess extends EventEmitter {
         });
 
         // Close stdin since we pass prompt as argument
-        this.process.stdin?.end();
+        if (this.process.stdin) {
+          this.process.stdin.end();
+        }
 
         console.error(`[Subprocess] Process spawned with PID: ${this.process.pid}`);
 

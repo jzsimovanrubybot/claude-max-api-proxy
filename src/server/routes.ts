@@ -75,6 +75,31 @@ export async function handleChatCompletions(
       });
       return;
     }
+    
+    // Validate message format
+    for (let i = 0; i < body.messages.length; i++) {
+      const msg = body.messages[i];
+      if (!msg.role || !msg.content) {
+        res.status(400).json({
+          error: {
+            message: `Message at index ${i} is missing 'role' or 'content'`,
+            type: "invalid_request_error",
+            code: "invalid_message_format",
+          },
+        });
+        return;
+      }
+      if (typeof msg.content !== "string") {
+        res.status(400).json({
+          error: {
+            message: `Message at index ${i} has invalid 'content' type (expected string)`,
+            type: "invalid_request_error",
+            code: "invalid_content_type",
+          },
+        });
+        return;
+      }
+    }
 
     // Convert to CLI input format
     const cliInput = openaiToCli(body);

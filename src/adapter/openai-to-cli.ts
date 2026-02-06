@@ -43,6 +43,7 @@ export function extractModel(model: string): ClaudeModel {
   }
 
   // Default to opus (Claude Max subscription)
+  console.warn(`[extractModel] Unknown model "${model}", defaulting to opus`);
   return "opus";
 }
 
